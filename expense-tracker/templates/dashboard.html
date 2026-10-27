@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Add expense</h2>
+  <form method="POST" action="{{ url_for('add') }}" class="add-row">
+    <label>Amount (₹)<input type="number" name="amount" step="0.01" min="0.01" required></label>
+    <label>Category
+      <select name="category">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select>
+    </label>
+    <label>Date<input type="date" name="date" value="{{ today }}" required></label>
+    <label>Note<input type="text" name="note" maxlength="200"></label>
+    <span></span>
+    <button type="submit">Add</button>
+  </form>
+</div>
+
+<div class="card bar">
+  <form method="GET" style="flex:1;min-width:160px">
+    <label>Month<input type="month" name="month" value="{{ month }}" onchange="this.form.submit()"></label>
+  </form>
+  <a class="btn" href="{{ url_for('export', month=month) }}">Download CSV</a>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Spent in {{ month }}</h2>
+    <div class="total">₹{{ '{:,.2f}'.format(total) }}</div>
+    <p class="empty">{{ rows|length }} expense{{ '' if rows|length == 1 else 's' }}</p>
+  </div>
+  <div class="card">
+    <h2>By category</h2>
+    {% if totals %}<canvas id="chart" height="180"></canvas>
+    {% else %}<p class="empty">Nothing recorded this month. Add an expense above.</p>{% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Expenses</h2>
+  {% if rows %}
+  <table>
+    <tr><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th><th></th></tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.date }}</td><td>{{ r.category }}</td><td>{{ r.note }}</td>
+      <td class="num">₹{{ '{:,.2f}'.format(r.amount) }}</td>
+      <td><form method="POST" action="{{ url_for('delete', eid=r.id) }}"
+                onsubmit="return confirm('Delete this expense?')">
+        <button class="del" type="submit">Delete</button></form></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="empty">No expenses for this month yet.</p>{% endif %}
+</div>
+
+{% if totals %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('chart'), {
+  type: 'doughnut',
+  data: { labels: {{ totals.keys()|list|tojson }},
+          datasets: [{ data: {{ totals.values()|list|tojson }},
+          backgroundColor: ['#0f766e','#b4412f','#2563eb','#ca8a04','#7c3aed','#db2777','#475569','#65a30d'] }] },
+  options: { plugins: { legend: { position: 'right' } } }
+});
+</script>
+{% endif %}
+{% endblock %}
